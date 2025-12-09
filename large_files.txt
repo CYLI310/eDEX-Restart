@@ -1,0 +1,4 @@
+./node_modules/electron/dist/Electron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework
+./.git/objects/pack/pack-7c675eab73edeb630893ceea2a634385573c3278.pack
+./prebuild-src/node_modules/electron/dist/Electron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework
+./src/node_modules/electron/dist/Electron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework
