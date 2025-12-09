@@ -1,0 +1,4 @@
+owner: GitSquared
+repo: edex-ui
+provider: github
+updaterCacheDirName: edex-ui-updater

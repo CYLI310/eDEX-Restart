@@ -138,9 +138,17 @@ class Terminal {
             let fitAddon = new FitAddon();
             this.term.loadAddon(fitAddon);
             this.term.open(document.getElementById(opts.parentId));
-            this.term.loadAddon(new WebglAddon());
-            let ligaturesAddon = new LigaturesAddon();
-            this.term.loadAddon(ligaturesAddon);
+            try {
+                this.term.loadAddon(new WebglAddon());
+            } catch (e) {
+                console.warn("WebGL Addon failed to load", e);
+            }
+            try {
+                let ligaturesAddon = new LigaturesAddon();
+                this.term.loadAddon(ligaturesAddon);
+            } catch (e) {
+                console.warn("Ligatures Addon failed to load", e);
+            }
             this.term.attachCustomKeyEventHandler(e => {
                 window.keyboard.keydownHandler(e);
                 return true;
@@ -182,7 +190,10 @@ class Terminal {
                 this.term.loadAddon(attachAddon);
                 this.fit();
             };
-            this.socket.onerror = e => { throw JSON.stringify(e) };
+            this.socket.onerror = e => {
+                console.error("Terminal WebSocket error:", e);
+                this.term.write("\r\n\x1b[31mTerminal WebSocket Connection Error\x1b[0m\r\n");
+            };
             this.socket.onclose = e => {
                 if (this.onclose) {
                     this.onclose(e);
@@ -377,7 +388,7 @@ class Terminal {
                             console.log("Error while tracking TTY working directory: ", e);
                             this._disableCWDtracking = true;
                             try {
-                                this.renderer.send("terminal_channel-" + this.port, "Fallback cwd", opts.cwd || process.env.PWD);
+                                if (this.renderer) this.renderer.send("terminal_channel-" + this.port, "Fallback cwd", opts.cwd || process.env.PWD);
                             } catch (e) {
                                 // renderer closed
                             }
@@ -397,7 +408,7 @@ class Terminal {
                         if (!this._closed) {
                             console.log("Error while retrieving TTY subprocess: ", e);
                             try {
-                                this.renderer.send("terminal_channel-" + this.port, "New process", "");
+                                if (this.renderer) this.renderer.send("terminal_channel-" + this.port, "New process", "");
                             } catch (e) {
                                 // renderer closed
                             }

@@ -101,7 +101,7 @@
   },
   "dependencies": {
     "clean-css": "^5.3.3",
-    "electron": "^33.2.0",
+    "electron": "^39.2.6",
     "electron-builder": "^25.1.8",
     "electron-rebuild": "^3.2.9",
     "mime-types": "^2.1.35",

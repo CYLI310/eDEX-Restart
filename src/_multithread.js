@@ -24,19 +24,38 @@ if (cluster.isMaster) {
         cluster.fork();
     }
 
+    cluster.on("exit", (worker, code, signal) => {
+        signale.warn(`Worker ${worker.process.pid} died (code: ${code}). Restarting...`);
+        const index = workers.indexOf(worker.id);
+        if (index > -1) {
+            workers.splice(index, 1);
+        }
+        cluster.fork();
+    });
+
     signale.success("Multithreaded controller ready");
 
     var lastID = 0;
 
     function dispatch(type, id, arg) {
-        let selectedID = lastID+1;
-        if (selectedID > numCPUs-1) selectedID = 0;
+        if (workers.length === 0) return;
 
-        cluster.workers[workers[selectedID]].send(JSON.stringify({
-            id,
-            type,
-            arg
-        }));
+        let selectedID = lastID + 1;
+        if (selectedID >= workers.length) selectedID = 0;
+
+        const workerID = workers[selectedID];
+        const worker = cluster.workers[workerID];
+
+        if (worker) {
+            worker.send(JSON.stringify({
+                id,
+                type,
+                arg
+            }));
+        } else {
+            // Worker died or is missing?
+            signale.warn(`Worker ${workerID} not found/undefined in dispatch. Skipping.`);
+        }
 
         lastID = selectedID;
     }
@@ -51,7 +70,7 @@ if (cluster.isMaster) {
         if (args.length > 1 || workers.length <= 0) {
             si[type](...args).then(res => {
                 if (e.sender) {
-                    e.sender.send("systeminformation-reply-"+id, res);
+                    e.sender.send("systeminformation-reply-" + id, res);
                 }
             });
         } else {
@@ -64,26 +83,49 @@ if (cluster.isMaster) {
         msg = JSON.parse(msg);
         try {
             if (!queue[msg.id].isDestroyed()) {
-                queue[msg.id].send("systeminformation-reply-"+msg.id, msg.res);
+                queue[msg.id].send("systeminformation-reply-" + msg.id, msg.res);
                 delete queue[msg.id];
             }
-        } catch(e) {
+        } catch (e) {
             // Window has been closed, ignore.
         }
     });
 } else if (cluster.isWorker) {
-    const signale = require("signale");
-    const si = require("systeminformation");
+    try {
+        const signale = require("signale");
+        const si = require("systeminformation");
 
-    signale.info("Multithread worker started at "+process.pid);
+        signale.info("Multithread worker started at " + process.pid);
 
-    process.on("message", msg => {
-        msg = JSON.parse(msg);
-        si[msg.type](msg.arg).then(res => {
-            process.send(JSON.stringify({
-                id: msg.id,
-                res
-            }));
+        process.on("message", msg => {
+            try {
+                msg = JSON.parse(msg);
+                if (si[msg.type]) {
+                    si[msg.type](msg.arg)
+                        .then(res => {
+                            process.send(JSON.stringify({
+                                id: msg.id,
+                                res
+                            }));
+                        })
+                        .catch(err => {
+                            signale.error(`Worker error in systeminformation call (${msg.type}):`, err);
+                            process.send(JSON.stringify({
+                                id: msg.id,
+                                res: { error: true, message: err.message, original: err }
+                            }));
+                        });
+                } else {
+                    signale.error(`Worker received unknown systeminformation type: ${msg.type}`);
+                }
+            } catch (e) {
+                signale.error("Worker failed to process message:", e);
+            }
         });
-    });
+    } catch (e) {
+        console.error("Worker failed to start:", e);
+        // Try to communicate back if possible, or just exit
+        process.exit(1);
+    }
 }
+

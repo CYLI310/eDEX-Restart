@@ -367,7 +367,9 @@ async function getDisplayName() {
         return user;
 
     try {
-        user = await require("username")();
+        const usernamePromise = require("username")();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000));
+        user = await Promise.race([usernamePromise, timeoutPromise]);
     } catch (e) { }
 
     return user;
@@ -404,10 +406,15 @@ async function initUI() {
     </section>
     <section id="keyboard" style="opacity:0;">
     </section>`;
-    window.keyboard = new Keyboard({
-        layout: path.join(keyboardsDir, settings.keyboard + ".json"),
-        container: "keyboard"
-    });
+    try {
+        window.keyboard = new Keyboard({
+            layout: path.join(keyboardsDir, settings.keyboard + ".json"),
+            container: "keyboard"
+        });
+    } catch (e) {
+        console.error("Keyboard initialization failed:", e);
+        ipc.send("log", "error", "Keyboard initialization failed: " + e.message);
+    }
 
     await _delay(10);
 
@@ -428,13 +435,17 @@ async function initUI() {
     greeter.setAttribute("style", "opacity: 1;");
 
     document.getElementById("filesystem").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1");
-    window.audioManager.keyboard.play();
+    try {
+        document.getElementById("keyboard").setAttribute("style", "");
+        document.getElementById("keyboard").setAttribute("class", "animation_state_1");
+        window.audioManager.keyboard.play();
+    } catch (e) { }
 
     await _delay(100);
 
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
+    try {
+        document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
+    } catch (e) { }
 
     await _delay(1000);
 
@@ -442,7 +453,9 @@ async function initUI() {
 
     await _delay(100);
 
-    document.getElementById("keyboard").setAttribute("class", "");
+    try {
+        document.getElementById("keyboard").setAttribute("class", "");
+    } catch (e) { }
 
     await _delay(400);
 
@@ -452,17 +465,21 @@ async function initUI() {
     window.mods = {};
 
     // Left column
-    window.mods.clock = new Clock("mod_column_left");
-    window.mods.sysinfo = new Sysinfo("mod_column_left");
-    window.mods.hardwareInspector = new HardwareInspector("mod_column_left");
-    window.mods.cpuinfo = new Cpuinfo("mod_column_left");
-    window.mods.ramwatcher = new RAMwatcher("mod_column_left");
-    window.mods.toplist = new Toplist("mod_column_left");
+    try {
+        window.mods.clock = new Clock("mod_column_left");
+        window.mods.sysinfo = new Sysinfo("mod_column_left");
+        window.mods.hardwareInspector = new HardwareInspector("mod_column_left");
+        window.mods.cpuinfo = new Cpuinfo("mod_column_left");
+        window.mods.ramwatcher = new RAMwatcher("mod_column_left");
+        window.mods.toplist = new Toplist("mod_column_left");
 
-    // Right column
-    window.mods.netstat = new Netstat("mod_column_right");
-    window.mods.globe = new LocationGlobe("mod_column_right");
-    window.mods.conninfo = new Conninfo("mod_column_right");
+        // Right column
+        window.mods.netstat = new Netstat("mod_column_right");
+        window.mods.globe = new LocationGlobe("mod_column_right");
+        window.mods.conninfo = new Conninfo("mod_column_right");
+    } catch (e) {
+        console.error("Modules initialization partial failure:", e);
+    }
 
     // Fade-in animations
     document.querySelectorAll(".mod_column").forEach(e => {
@@ -505,28 +522,40 @@ async function initUI() {
             <pre id="terminal3"></pre>
             <pre id="terminal4"></pre>
         </div>`;
-    window.term = {
-        0: new Terminal({
-            role: "client",
-            parentId: "terminal0",
-            port: window.settings.port || 3000
-        })
-    };
-    window.currentTerm = 0;
-    window.term[0].onprocesschange = p => {
-        document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
-    };
-    // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
-    window.onmouseup = e => {
-        if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
-    };
-    window.term[0].term.writeln("\x1b[1m" + `Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}` + "\x1b[0m");
+    try {
+        window.term = {
+            0: new Terminal({
+                role: "client",
+                parentId: "terminal0",
+                port: window.settings.port || 3000
+            })
+        };
+        window.currentTerm = 0;
+        window.term[0].onprocesschange = p => {
+            document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
+        };
+        // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
+        window.onmouseup = e => {
+            if (window.keyboard.linkedToTerm && window.term && window.term[window.currentTerm]) window.term[window.currentTerm].term.focus();
+        };
+        window.term[0].term.writeln("\x1b[1m" + `Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}` + "\x1b[0m");
+    } catch (e) {
+        window.term = {}; // Prevent downstream crashes
+        console.error("Terminal initialization failed:", e);
+        ipc.send("log", "error", "Terminal initialization failed: " + e.message);
+        document.getElementById("shell_tab0").innerHTML = "<p>ERROR</p>";
+    }
 
     await _delay(100);
 
-    window.fsDisp = new FilesystemDisplay({
-        parentId: "filesystem"
-    });
+    try {
+        window.fsDisp = new FilesystemDisplay({
+            parentId: "filesystem"
+        });
+    } catch (e) {
+        console.error("Filesystem initialization failed:", e);
+        ipc.send("log", "error", "Filesystem initialization failed: " + e.message);
+    }
 
     await _delay(200);
 
@@ -534,7 +563,9 @@ async function initUI() {
 
     // Resend terminal CWD to fsDisp if we're hot reloading
     if (window.performance.navigation.type === 1) {
-        window.term[window.currentTerm].resendCWD();
+        if (window.term && window.term[window.currentTerm]) {
+            window.term[window.currentTerm].resendCWD();
+        }
     }
 
     await _delay(200);

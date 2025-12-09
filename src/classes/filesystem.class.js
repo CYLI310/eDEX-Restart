@@ -7,7 +7,7 @@ class FilesystemDisplay {
         this.cwd = [];
         this.cwd_path = null;
         this.iconcolor = `rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b})`;
-        this._formatBytes = (a,b) => {if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]};
+        this._formatBytes = (a, b) => { if (0 == a) return "0 Bytes"; var c = 1024, d = b || 2, e = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"], f = Math.floor(Math.log(a) / Math.log(c)); return parseFloat((a / Math.pow(c, f)).toFixed(d)) + " " + e[f] };
         this.fileIconsMatcher = require("./assets/misc/file-icons-match.js");
         this.icons = require("./assets/icons/file-icons.json");
         this.edexIcons = {
@@ -67,9 +67,9 @@ class FilesystemDisplay {
         }, 1000);
 
         this._asyncFSwrapper = new Proxy(fs, {
-            get: function(fs, prop) {
+            get: function (fs, prop) {
                 if (prop in fs) {
-                    return function(...args) {
+                    return function (...args) {
                         return new Promise((resolve, reject) => {
                             fs[prop](...args, (err, d) => {
                                 if (typeof err !== "undefined" && err !== null) reject(err);
@@ -80,7 +80,7 @@ class FilesystemDisplay {
                     }
                 }
             },
-            set: function() {
+            set: function () {
                 return false;
             }
         });
@@ -97,6 +97,8 @@ class FilesystemDisplay {
             if (this._noTracking) return false;
 
             let num = window.currentTerm;
+
+            if (!window.term || !window.term[num]) return false;
 
             window.term[num].oncwdchange = cwd => {
                 // See #501
@@ -161,7 +163,7 @@ class FilesystemDisplay {
                 document.querySelector("section#filesystem > h3.title > p:first-of-type").innerText = "FILESYSTEM - TRACKING FAILED, RUNNING DETACHED FROM TTY";
             }
 
-            if (process.platform === "win32" && dir.endsWith(":")) dir = dir+"\\";
+            if (process.platform === "win32" && dir.endsWith(":")) dir = dir + "\\";
             let tcwd = dir;
             let content = await this._asyncFSwrapper.readdir(tcwd).catch(err => {
                 console.warn(err);
@@ -204,7 +206,7 @@ class FilesystemDisplay {
                             e.category = "dir";
                             e.type = "dir";
                         }
-                        if (e.category === "dir" && tcwd === settingsDir && file === "themes") e.type="edex-themesDir";
+                        if (e.category === "dir" && tcwd === settingsDir && file === "themes") e.type = "edex-themesDir";
                         if (e.category === "dir" && tcwd === settingsDir && file === "keyboards") e.type = "edex-kblayoutsDir";
 
                         if (fstat.isSymbolicLink()) {
@@ -230,7 +232,7 @@ class FilesystemDisplay {
                     if (file.startsWith(".")) e.hidden = true;
 
                     this.cwd.push(e);
-                    if (i === content.length-1) resolve();
+                    if (i === content.length - 1) resolve();
                 });
             }).catch(() => { this.setFailedState() });
 
@@ -381,7 +383,7 @@ class FilesystemDisplay {
 
                 let icon = "";
                 let type = "";
-                switch(e.type) {
+                switch (e.type) {
                     case "showDisks":
                         icon = this.icons.showDisks;
                         type = "--";
@@ -466,7 +468,7 @@ class FilesystemDisplay {
                     e.lastAccessed = "--";
                 }
 
-                filesDOM += `<div class="fs_disp_${e.type}${hidden} animationWait" onclick='${cmdPrefix+cmd+cmdSuffix}'>
+                filesDOM += `<div class="fs_disp_${e.type}${hidden} animationWait" onclick='${cmdPrefix + cmd + cmdSuffix}'>
                                 <svg viewBox="0 0 ${icon.width} ${icon.height}" fill="${this.iconcolor}">
                                     ${icon.svg}
                                 </svg>
@@ -521,7 +523,7 @@ class FilesystemDisplay {
             if (document.getElementById("fs_space_bar").getAttribute("onclick") !== "" || fsBlock === null) return;
 
             let splitter = (process.platform === "win32") ? "\\" : "/";
-            let displayMount = (fsBlock.mount.length < 18) ? fsBlock.mount : "..."+splitter+fsBlock.mount.split(splitter).pop();
+            let displayMount = (fsBlock.mount.length < 18) ? fsBlock.mount : "..." + splitter + fsBlock.mount.split(splitter).pop();
 
             // See #226
             if (!isNaN(fsBlock.use)) {
@@ -543,7 +545,11 @@ class FilesystemDisplay {
         // ...except if we're hot-reloading, in which case this can mess up the rendering
         // See #392
         if (window.performance.navigation.type === 0) {
-            this.readFS(window.term[window.currentTerm].cwd || window.settings.cwd);
+            let initialCwd = window.settings.cwd;
+            if (window.term && window.term[window.currentTerm] && window.term[window.currentTerm].cwd) {
+                initialCwd = window.term[window.currentTerm].cwd;
+            }
+            this.readFS(initialCwd);
         }
 
         this.openFile = (name, path, type) => { //Might add text formatting at some point, not now though - Surge
@@ -621,7 +627,7 @@ class FilesystemDisplay {
                                     title: _escapeHtml(name),
                                     html: `<textarea id="fileEdit" rows="40" cols="150" spellcheck="false">${data}</textarea><p id="fedit-status"></p>`,
                                     buttons: [
-                                        {label:"Save to Disk",action:`window.writeFile('${block.path}')`}
+                                        { label: "Save to Disk", action: `window.writeFile('${block.path}')` }
                                     ]
                                 }, () => {
                                     window.keyboard.attach();
@@ -629,8 +635,8 @@ class FilesystemDisplay {
                                 }
                             );
                         });
-                   break;
-                }
+                        break;
+                    }
             }
         };
 
