@@ -393,12 +393,12 @@ async function initUI() {
     window.audioManager.expand.play();
     document.getElementById("main_shell").setAttribute("style", "height:0%;margin-bottom:30vh;");
 
-    await _delay(500);
+    await _delay(200);
 
     document.getElementById("main_shell").setAttribute("style", "margin-bottom: 30vh;");
     document.querySelector("#main_shell > h3.title").setAttribute("style", "");
 
-    await _delay(700);
+    await _delay(300);
 
     document.getElementById("main_shell").setAttribute("style", "opacity: 0;");
     document.body.innerHTML += `
@@ -420,7 +420,7 @@ async function initUI() {
 
     document.getElementById("main_shell").setAttribute("style", "");
 
-    await _delay(270);
+    await _delay(100);
 
     let greeter = document.getElementById("main_shell_greeting");
 
@@ -441,23 +441,23 @@ async function initUI() {
         window.audioManager.keyboard.play();
     } catch (e) { }
 
-    await _delay(100);
+    await _delay(50);
 
     try {
         document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
     } catch (e) { }
 
-    await _delay(1000);
+    await _delay(300);
 
     greeter.setAttribute("style", "opacity: 0;");
 
-    await _delay(100);
+    await _delay(50);
 
     try {
         document.getElementById("keyboard").setAttribute("class", "");
     } catch (e) { }
 
-    await _delay(400);
+    await _delay(100);
 
     greeter.remove();
 
@@ -501,9 +501,9 @@ async function initUI() {
             }
             i++;
         }
-    }, 500);
+    }, 200);
 
-    await _delay(100);
+    await _delay(50);
 
     // Initialize the terminal
     let shellContainer = document.getElementById("main_shell");
@@ -546,7 +546,7 @@ async function initUI() {
         document.getElementById("shell_tab0").innerHTML = "<p>ERROR</p>";
     }
 
-    await _delay(100);
+    await _delay(50);
 
     try {
         window.fsDisp = new FilesystemDisplay({
@@ -557,7 +557,7 @@ async function initUI() {
         ipc.send("log", "error", "Filesystem initialization failed: " + e.message);
     }
 
-    await _delay(200);
+    await _delay(100);
 
     document.getElementById("filesystem").setAttribute("style", "opacity: 1;");
 
@@ -568,7 +568,7 @@ async function initUI() {
         }
     }
 
-    await _delay(200);
+    await _delay(100);
 
     window.updateCheck = new UpdateChecker();
 }
